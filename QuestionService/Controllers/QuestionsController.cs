@@ -55,9 +55,12 @@ public class QuestionsController(QuestionDbContext db,
 	[HttpGet("{id}")]
 	public async Task<IActionResult> GetQuestionAsync(string id)
 	{
-		var question = await db.Questions.FindAsync(id);
+		var question = await db.Questions.AsNoTracking()
+			.Include(x=> x.Answers)
+			.FirstOrDefaultAsync(x=> x.Id == id);
+
 		if (question is null)
-			return NotFound("Question not found !");
+			return NotFound("Question was not found !");
 
 		await db.Questions.Where(x => x.Id == id)
 			.ExecuteUpdateAsync(setters => setters.SetProperty(x => x.ViewCount,
@@ -118,8 +121,98 @@ public class QuestionsController(QuestionDbContext db,
 
 		db.Questions.Remove(questionToRemove);
 		await db.SaveChangesAsync();
+
 		await bus.PublishAsync(new QuestionDeleted(questionToRemove.Id));
 
 		return NoContent();
 	}
+
+	[Authorize]
+	[HttpPost("{questionId}/answers")]
+	public async Task<IActionResult> AnswerQuestionAsync([FromRoute] string questionId, CreateAnswerDto dto)
+	{
+		var question = await db.Questions.FindAsync(questionId);
+		if (question is null)
+			return NotFound("Question was not found !");
+
+		var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+		var name = User.FindFirstValue("Name");
+		if (userId is null || name is null) return BadRequest("Cannot get user details.");
+
+		var answer = new Answer
+		{
+			Content = dto.Content,
+			UserId = userId,
+			UserDisplayName = name,
+			QuestionId = questionId
+		};
+
+		question.Answers.Add(answer);
+		question.AnswerCount++;
+		await db.SaveChangesAsync();
+
+		await bus.PublishAsync(new UpdatedAnswerCount(questionId, question.AnswerCount));
+
+		return Created($"/questions/{question.Id}", answer);
+	}
+
+	[Authorize]
+	[HttpPut("{questionId}/answers/{answerId}")]
+	public async Task<IActionResult> UpdateAnswerAsync([FromRoute] string questionId, [FromRoute] string answerId, [FromBody] CreateAnswerDto dto)
+	{
+		var answerInDb = await db.Answers.FindAsync(answerId);
+		if (answerInDb is null)
+			return NotFound("Answer was not found !");
+
+		if (answerInDb.QuestionId != questionId)
+			return BadRequest("Cannot update answer details.");
+
+		answerInDb.Content = dto.Content;
+		answerInDb.UpdatedAt = DateTime.UtcNow;
+		await db.SaveChangesAsync();
+
+		return NoContent();
+	}
+
+	[Authorize]
+	[HttpDelete("{questionId}/answers/{answerId}")]
+	public async Task<IActionResult> DeleteAnswerAsync([FromRoute] string questionId, [FromRoute] string answerId)
+	{
+		var question = await db.Questions.FindAsync(questionId);
+		var answer = await db.Answers.FindAsync(answerId);
+		if (question is null || answer is null)
+			return NotFound();
+
+		if (answer.QuestionId != questionId || answer.Accepted)
+			return BadRequest("Cannot delete this answer.");
+
+		question.Answers.Remove(answer);
+		question.AnswerCount--;
+		await db.SaveChangesAsync();
+
+		await bus.PublishAsync(new UpdatedAnswerCount(questionId, question.AnswerCount));
+
+		return NoContent();
+	}
+
+	[Authorize]
+	[HttpPost("{questionId}/answers/{answerId}/accept")]
+	public async Task<IActionResult> AcceptAnswerAsync([FromRoute] string questionId, [FromRoute] string answerId)
+	{
+		var question = await db.Questions.FindAsync(questionId);
+		var answer = await db.Answers.FindAsync(answerId);
+
+		if (question is null || answer is null) return NotFound();
+
+		if (question.HasAcceptedAnswer || answer.QuestionId != questionId)
+			return BadRequest("Cannot accept answer");
+		
+		question.HasAcceptedAnswer = answer.Accepted = true;
+		await db.SaveChangesAsync();
+
+		await bus.PublishAsync(new AnswerAccepted(questionId));
+
+		return NoContent();
+	}
+
 }
