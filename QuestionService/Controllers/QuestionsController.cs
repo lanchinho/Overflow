@@ -1,16 +1,21 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Contracts;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuestionService.Data;
 using QuestionService.DTOs;
 using QuestionService.Models;
+using QuestionService.Services;
 using System.Security.Claims;
+using Wolverine;
 
 namespace QuestionService.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class QuestionsController(QuestionDbContext db) : ControllerBase
+public class QuestionsController(QuestionDbContext db,
+	IMessageBus bus,
+	TagService tagService) : ControllerBase
 {
 	[Authorize]
 	[HttpPost]
@@ -31,12 +36,18 @@ public class QuestionsController(QuestionDbContext db) : ControllerBase
 			AskerDisplayName = name
 		};
 
-		var TagErrorMsg = await ValidateTags(question.TagSlugs);
-		if (!string.IsNullOrWhiteSpace(TagErrorMsg))
-			return BadRequest(TagErrorMsg);
+		if (!await tagService.AreTagsValidAsync(question.TagSlugs))
+			return BadRequest("Invalid tags!");
 
 		db.Questions.Add(question);
 		await db.SaveChangesAsync();
+
+		await bus.PublishAsync(new QuestionCreated(
+			question.Id,
+			question.Title,
+			question.Content,
+			question.CreatedAt,
+			question.TagSlugs));
 
 		return Created($"/questions/{question.Id}", question);
 	}
@@ -80,9 +91,8 @@ public class QuestionsController(QuestionDbContext db) : ControllerBase
 		if (userId is null)
 			return Forbid();
 
-		var TagErrorMsg = await ValidateTags(request.Tags);
-		if (!string.IsNullOrWhiteSpace(TagErrorMsg))
-			return BadRequest(TagErrorMsg);
+		if (!await tagService.AreTagsValidAsync(request.Tags))
+			return BadRequest("Invalid tags!");
 
 		questionInDb.Title = request.Title;
 		questionInDb.Content = request.Content;
@@ -90,6 +100,7 @@ public class QuestionsController(QuestionDbContext db) : ControllerBase
 		questionInDb.UpdatedAt = DateTime.UtcNow;
 		await db.SaveChangesAsync();
 
+		await bus.PublishAsync(new QuestionUpdated(questionInDb.Id, questionInDb.Title, questionInDb.Content, [.. questionInDb.TagSlugs]));
 		return NoContent();
 	}
 
@@ -107,19 +118,8 @@ public class QuestionsController(QuestionDbContext db) : ControllerBase
 
 		db.Questions.Remove(questionToRemove);
 		await db.SaveChangesAsync();
+		await bus.PublishAsync(new QuestionDeleted(questionToRemove.Id));
+
 		return NoContent();
-	}
-
-	private async Task<string> ValidateTags(List<string> tags)
-	{
-		var validTags = await db.Tags.Where(x => tags.Contains(x.Slug))
-			.AsNoTracking()
-			.ToListAsync();
-
-		var invalidTags = tags.Except(validTags.Select(x => x.Slug)).ToList();
-		if (invalidTags.Count != 0)
-			return $"Invalid tags: {string.Join(",", invalidTags)}";
-
-		return "";
 	}
 }
