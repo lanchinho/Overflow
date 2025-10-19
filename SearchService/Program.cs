@@ -1,9 +1,7 @@
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
+using Common;
 using SearchService.Data;
 using SearchService.Endpoints;
 using Typesense;
-using Wolverine;
 using Wolverine.RabbitMQ;
 
 namespace SearchService;
@@ -21,25 +19,15 @@ public class Program
 		builder.Services.AddOpenApi()
 			.AddTypesense(builder.Configuration);
 
-		builder.AddServiceDefaults();	
+		builder.AddServiceDefaults();
 
-	    builder.Services.AddOpenTelemetry().WithTracing(traveProviderBuilder =>
+		await builder.UseWolverineWithRabbitMqAsync(builder.Configuration, opts =>
 		{
-			traveProviderBuilder.SetResourceBuilder(ResourceBuilder.CreateDefault()
-				.AddService(builder.Environment.ApplicationName))
-				.AddSource("Wolverine");
-		});
-
-		builder.Host.UseWolverine(opts =>
-		{
-			opts.UseRabbitMqUsingNamedConnection("messaging")
-			.AutoProvision();
-
-			opts.ListenToRabbitQueue("question.search", config =>
+			opts.ListenToRabbitQueue("questions.search", cfg =>
 			{
-				config.BindExchange("questions");
+				cfg.BindExchange("questions");
 			});
-
+			opts.ApplicationAssembly = typeof(Program).Assembly;
 		});
 
 		var app = builder.Build();
