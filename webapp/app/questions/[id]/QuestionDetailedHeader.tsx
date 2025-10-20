@@ -1,4 +1,5 @@
 import { Question } from "@/lib/types";
+import { fuzzyTimeAgo } from "@/lib/util";
 import { Button } from "@heroui/button";
 import Link from "next/link";
 
@@ -25,16 +26,16 @@ export default function QuestionDetailedHeader({question}:Props) {
       <div className="flex items-center-gap-6">
         <div className="flex item-center gap-3">
           <span className="text-foreground-500">Asked</span>
-          <span>{question.createdAt}</span>
+          <span>{fuzzyTimeAgo(question.createdAt)}</span>
         </div>
         {question.updatedAt && (
           <div className="flex item-center gap-3">
             <span className="text-foreground-500">Modified</span>
-            <span>{question.updatedAt}</span>
+            <span>{fuzzyTimeAgo(question.updatedAt)}</span>
           </div>
         )}
         <div className="flex item-center gap-3">
-          <span className="text-foreground-500">Viewed</span>
+          <span className="text-foreground-500">&nbsp; Viewed</span>
           <span>{question.viewCount +1} times</span>
         </div>
       </div>
