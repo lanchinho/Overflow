@@ -41,3 +41,7 @@ export function fuzzyTimeAgo(date: string | Date){
 export function timeAgo(date: string | Date){
   return formatDistanceToNow(date, {addSuffix: true});
 }
+
+export function stripHtmlTags(html: string){
+  return html.replace(/<[^>]*>/g, "").trim();
+}
