@@ -2,7 +2,7 @@ import { Button } from "@heroui/button";
 
 
 export default function RegisterButton() {
-  const clientId = "nextjs";
+  const clientId = process.env.AUTH_KEYCLOAK_ID;
   const issuer = process.env.AUTH_KEYCLOAK_ISSUER;
   const redirectUrl = process.env.AUTH_URL;
 
