@@ -1,11 +1,14 @@
 import { Answer } from "@/lib/types";
 import VotingButtons from "./VotingButtons";
 import AnswerFooter from "./AnswerFooter";
+import { getCurrentUser } from "@/lib/actions/auth-actions";
 
 type Props = {
     answer: Answer;
 }
-export default function AnswerContent({answer}: Props) {
+export default async function AnswerContent({answer}: Props) {
+  const user = await getCurrentUser();
+
   return (
     <div className="flex border-b pb-3 px-6">
       <VotingButtons accepted={answer.accepted}/>
@@ -14,7 +17,7 @@ export default function AnswerContent({answer}: Props) {
           dangerouslySetInnerHTML={{__html: answer.content}}
 
         />
-        <AnswerFooter answer={answer}/>
+        <AnswerFooter answer={answer} currentUser={user}/>
       </div>
     </div>
   );

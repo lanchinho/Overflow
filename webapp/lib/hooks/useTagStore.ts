@@ -1,5 +1,5 @@
 import { create } from "zustand/react";
-import { Tag } from "./types";
+import { Tag } from "../types";
 
 type TagStore ={
     tags: Tag[];

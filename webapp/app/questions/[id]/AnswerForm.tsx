@@ -1,39 +1,51 @@
 "use client";
 
 import RichTextEditor from "@/components/rte/RichTextEditor";
-import { postAnswer } from "@/lib/actions/question-actions";
-import { answerSchema, AnswerSchema } from "@/lib/schemas/answerSchema";
-import { Answer } from "@/lib/types";
+import { editAnswer, postAnswer } from "@/lib/actions/question-actions";
+import { useAnswerStore } from "@/lib/hooks/useAnswerStore";
+import { answerSchema, AnswerSchema } from "@/lib/schemas/answerSchema";;
 import { handleError } from "@/lib/util";
-import { Form } from "@heroui/form";
 import { Button } from "@heroui/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 
-type Props ={
-    answer?: Answer;
+type Props ={    
     questionId: string;
 }
 
-export default function AnswerForm({answer, questionId} : Props) {
+export default function AnswerForm({questionId} : Props) {
   const [pending, startTransition] = useTransition();
+  const editableAnswer = useAnswerStore(state => state.answer);
+  const clearAnswer = useAnswerStore(state => state.clearAnswer);
+
   const {control, handleSubmit, reset, formState} = useForm<AnswerSchema>({
     mode:"onTouched",
-    resolver: zodResolver(answerSchema)
+    resolver: zodResolver(answerSchema),
+    values:{
+      content: editableAnswer?.content
+    }
   });
 
-  const onSubmit = (data: AnswerSchema) =>{
-    startTransition(async ()=>{
-      const {error} = await postAnswer(data, questionId);
-      if(error) handleError(error);
-      reset();
+  const onSubmit = (data: AnswerSchema) => {
+    startTransition(async () => {
+      if (editableAnswer) {
+        const {error} = await editAnswer(editableAnswer.id, 
+          editableAnswer.questionId, data);
+        if (error) handleError(error);
+        clearAnswer();
+        reset();
+      } else {
+        const {error} = await postAnswer(data, questionId);
+        if (error) handleError(error);
+        reset();
+      }
     });
   };
 
   return (
-    <div className="flex flex-col gap-3 items-start my-4 w-full px-6">
+    <div id="answer-form" className="flex flex-col gap-3 items-start my-4 w-full px-6">
       <h3 className="text-2xl">Your answer</h3>
       <form className="w-full flex-col gap-3" onSubmit={handleSubmit(onSubmit)}>
         <Controller
@@ -54,7 +66,7 @@ export default function AnswerForm({answer, questionId} : Props) {
             </>
           )}       
         />
-        
+        <br/>
         <div className='flex items-start gap-3 mb-6'>
           <Button
             isDisabled={!formState.isValid || pending}
@@ -63,7 +75,18 @@ export default function AnswerForm({answer, questionId} : Props) {
             className="w-fit"
             type="submit"
           >
-            Post your answer            
+            {editableAnswer ? "Update" : "Post"} your answer            
+          </Button>
+          <Button
+            isDisabled={!editableAnswer}
+            onPress={() => {
+              clearAnswer();
+              reset();
+            }}
+            className="w-fit"
+            type="button"
+          >
+            Cancel
           </Button>
         </div>        
       </form>
