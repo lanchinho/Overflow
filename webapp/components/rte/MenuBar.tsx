@@ -1,6 +1,8 @@
-import { BoldIcon, CodeBracketIcon, ItalicIcon, StrikethroughIcon } from "@heroicons/react/24/solid";
+import { errorToast } from "@/lib/util";
+import { BoldIcon, CodeBracketIcon, ItalicIcon, LinkIcon, PhotoIcon, StrikethroughIcon } from "@heroicons/react/24/solid";
 import { Button } from "@heroui/button";
 import { Editor, useEditorState } from "@tiptap/react";
+import {CldUploadButton, CloudinaryUploadWidgetResults} from "next-cloudinary";
 
 type Props ={
     editor: Editor | null;
@@ -16,12 +18,21 @@ export default function MenuBar({editor} : Props) {
         isBold: editor.isActive("bold"),
         isItalic: editor.isActive("italic"),
         isstrike: editor.isActive("strike"),
-        isCodeBlock: editor.isActive("codeBlock"),        
+        isCodeBlock: editor.isActive("codeBlock"),
+        isLink: editor.isActive("link")        
       };
     }        
   });
 
   if(!editor || !editorState) return null;
+
+  const onUploadImage = (result: CloudinaryUploadWidgetResults) =>{
+    if(result.info && typeof result.info === "object"){
+      editor.chain().focus().setImage({src: result.info.secure_url}).run();      
+    }else{
+      errorToast({message: "Problem adding image"});
+    }
+  };
 
   const options =[
     {
@@ -43,6 +54,11 @@ export default function MenuBar({editor} : Props) {
       icon:<CodeBracketIcon className="w-5 h-5"/>,
       onclick: () => editor.chain().focus().toggleCodeBlock().run(),
       pressed: editorState.isCodeBlock
+    },
+    {
+      icon:<LinkIcon className="w-5 h-5"/>,
+      onclick: () => editor.chain().focus().toggleLink().run(),
+      pressed: editorState.isLink
     }
   ];
 
@@ -61,7 +77,18 @@ export default function MenuBar({editor} : Props) {
         >
           {option.icon}
         </Button>
-      ))}            
+      ))}
+      <Button
+        isIconOnly
+        size="sm"
+        as={CldUploadButton}
+        options={{maxFiles: 1}}
+        onSuccess={onUploadImage}
+        signatureEndpoint="/api/sign-image"
+        uploadPreset="overflow"
+      >
+        <PhotoIcon className="w-5 h-5"/>
+      </Button>            
     </div>
   );
 }

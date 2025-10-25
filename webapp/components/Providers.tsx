@@ -1,7 +1,7 @@
 "use client";
 
 import { getTags } from "@/lib/actions/tag-actions";
-import { useTagStore } from "@/lib/useTagStore";
+import { useTagStore } from "@/lib/hooks/useTagStore";
 import { HeroUIProvider, ToastProvider } from "@heroui/react";
 import { ThemeProvider } from "next-themes";
 import { useRouter } from "next/navigation";

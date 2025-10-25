@@ -1,6 +1,6 @@
 "use client";
 
-import { useTagStore } from "@/lib/useTagStore";
+import { useTagStore } from "@/lib/hooks/useTagStore";
 import { Button } from "@heroui/button";
 import { Tab, Tabs } from "@heroui/tabs";
 import Link from "next/link";

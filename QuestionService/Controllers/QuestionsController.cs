@@ -1,4 +1,5 @@
 ﻿using Contracts;
+using Ganss.Xss;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -27,10 +28,11 @@ public class QuestionsController(QuestionDbContext db,
 		if (userId is null || name is null)
 			return BadRequest("Cannot get user details");
 
+		var sanitizer = new HtmlSanitizer();
 		var question = new Question
 		{
 			Title = dto.Title,
-			Content = dto.Content,
+			Content = sanitizer.Sanitize(dto.Content),
 			TagSlugs = dto.Tags,
 			AskerId = userId,
 			AskerDisplayName = name
@@ -97,8 +99,9 @@ public class QuestionsController(QuestionDbContext db,
 		if (!await tagService.AreTagsValidAsync(request.Tags))
 			return BadRequest("Invalid tags!");
 
+		var sanitizer = new HtmlSanitizer();
 		questionInDb.Title = request.Title;
-		questionInDb.Content = request.Content;
+		questionInDb.Content = sanitizer.Sanitize(request.Content);
 		questionInDb.TagSlugs = request.Tags;
 		questionInDb.UpdatedAt = DateTime.UtcNow;
 		await db.SaveChangesAsync();
@@ -139,9 +142,10 @@ public class QuestionsController(QuestionDbContext db,
 		var name = User.FindFirstValue("Name");
 		if (userId is null || name is null) return BadRequest("Cannot get user details.");
 
+		var sanitizer = new HtmlSanitizer();
 		var answer = new Answer
 		{
-			Content = dto.Content,
+			Content = sanitizer.Sanitize(dto.Content),
 			UserId = userId,
 			UserDisplayName = name,
 			QuestionId = questionId
@@ -167,7 +171,8 @@ public class QuestionsController(QuestionDbContext db,
 		if (answerInDb.QuestionId != questionId)
 			return BadRequest("Cannot update answer details.");
 
-		answerInDb.Content = dto.Content;
+		var sanitizer = new HtmlSanitizer();
+		answerInDb.Content = sanitizer.Sanitize(dto.Content);
 		answerInDb.UpdatedAt = DateTime.UtcNow;
 		await db.SaveChangesAsync();
 

@@ -4,6 +4,7 @@ import QuestionDetailedHeader from "./QuestionDetailedHeader";
 import QuestionContent from "./QuestionContent";
 import AnswerContent from "./AnswerContent";
 import AnswersHeader from "./AnswersHeader";
+import AnswerForm from "./AnswerForm";
 
 type Params = Promise<{id: string}>
 
@@ -24,6 +25,7 @@ export default async function QuestionDetailedPage({params}: {params: Params}) {
       {question.answers.map(answer=>(
         <AnswerContent answer={answer} key={answer.id}/>
       ))}
+      <AnswerForm  questionId={question.id}/>
     </div>
   );
 }
