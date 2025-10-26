@@ -5,6 +5,7 @@ import { Question } from "@/lib/types";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { Input } from "@heroui/input";
 import { Listbox, ListboxItem } from "@heroui/listbox";
+import { Spinner } from "@heroui/spinner";
 import { useEffect, useRef, useState } from "react";
 
 export default function SearchInput() {
@@ -47,6 +48,7 @@ export default function SearchInput() {
         placeholder='search'
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        endContent={loading && <Spinner size="sm"/>}
       />
       {showDropdown && results && (
         <div className="absolute top-full z-50 bg-white dark:bg-default-50 shadow-lg border-2 border-default-500 w-[60%]">

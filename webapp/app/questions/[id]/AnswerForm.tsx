@@ -1,15 +1,16 @@
 "use client";
 
-import RichTextEditor from "@/components/rte/RichTextEditor";
 import { editAnswer, postAnswer } from "@/lib/actions/question-actions";
 import { useAnswerStore } from "@/lib/hooks/useAnswerStore";
 import { answerSchema, AnswerSchema } from "@/lib/schemas/answerSchema";;
 import { handleError } from "@/lib/util";
 import { Button } from "@heroui/react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import dynamic from "next/dynamic";
 import { useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 
+const RichTextEditor = dynamic(() => import("@/components/rte/RichTextEditor"), {ssr: false});
 
 type Props ={    
     questionId: string;

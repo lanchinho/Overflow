@@ -10,7 +10,8 @@ var keycloak = builder.AddKeycloak("keycloak", 6001)
 	.WithDataVolume("keycloak-data")
 	.WithRealmImport("../infra/realms")
 	.WithEnvironment("KC_HTTP_ENABLED", "true")
-	.WithEnvironment("KC_HOSTNAME_STRICT", "false")	
+	.WithEnvironment("KC_HOSTNAME_STRICT", "false")
+	.WithEnvironment("KC_PROXY_HEADERS", "xforwarded")
 	.WithEnvironment("VIRTUAL_HOST", "id.overflow.local")
 	.WithEnvironment("VIRTUAL_PORT", "8080");
 
@@ -70,13 +71,18 @@ var yarp = builder.AddYarp("gateway")
 
 var webapp = builder.AddNpmApp("webapp", "../webapp", "dev")	
 	.WithReference(keycloak)
-	.WithHttpEndpoint(env: "PORT", port:3000);
+	.WithHttpEndpoint(env: "PORT", port:3000, targetPort: 4000)
+	.WithEnvironment("VIRTUAL_HOST", "app.overflow.local")
+	.WithEnvironment("VIRTUAL_PORT", "4000")
+	.PublishAsDockerFile(); 
 
 if (!builder.Environment.IsDevelopment())
 {
 	builder.AddContainer("nginx-proxy", "nginxproxy/nginx-proxy", "1.8")
-		.WithEndpoint(80, 80, "nginx", isExternal:true)
-		.WithBindMount("/var/run/docker.sock", "/tmp/docker.sock", true);
+		.WithEndpoint(80, 80, "nginx", isExternal: true)
+		.WithEndpoint(443, 443, "nginx-ssl", isExternal: true)
+		.WithBindMount("/var/run/docker.sock", "/tmp/docker.sock", true)
+		.WithBindMount("D:/Projetos Estudos/NetAspire/Overflow/infra/devcerts", "/etc/nginx/certs", true);
 }
 
 builder.Build().Run();
