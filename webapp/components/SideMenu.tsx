@@ -1,6 +1,6 @@
 "use client";
 
-import { HomeIcon, QuestionMarkCircleIcon, TagIcon, UserIcon } from "@heroicons/react/24/solid";
+import { HomeIcon, QuestionMarkCircleIcon, TagIcon, UserGroupIcon, UserIcon } from "@heroicons/react/24/solid";
 import {Listbox, ListboxItem} from "@heroui/listbox";
 import { usePathname } from "next/navigation";
 
@@ -11,6 +11,7 @@ export default function SideMenu() {
     {key: "questions", icon: QuestionMarkCircleIcon, text: "Questions", href: "/questions"},
     {key: "tags", icon: TagIcon, text: "Tags", href: "/tags"},
     {key: "session", icon: UserIcon, text: "User Session", href: "/session"},
+    {key: "profiles", icon: UserGroupIcon, text: "Profiles", href: "/profiles"},
   ];
   return (
     <Listbox
