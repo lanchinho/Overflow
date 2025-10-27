@@ -14,7 +14,9 @@ export default function UserMenu({user} : Props) {
     <Dropdown>
       <DropdownTrigger>
         <div className="flex items-center gap-2 cursor-pointer">
-          <Avatar color='secondary' size='sm' name={user.name?.charAt(0).toUpperCase()}/>
+          <Avatar suppressHydrationWarning
+            color='secondary' size='sm' name={user.displayName?.charAt(0).toUpperCase()}/>
+          {user.displayName}
         </div>            
       </DropdownTrigger>
       <DropdownMenu>

@@ -2,7 +2,6 @@ using Common;
 using Microsoft.EntityFrameworkCore;
 using QuestionService.Data;
 using QuestionService.Services;
-using Wolverine.RabbitMQ;
 
 namespace QuestionService
 {
@@ -23,8 +22,7 @@ namespace QuestionService
 
 			builder.AddNpgsqlDbContext<QuestionDbContext>("questionDb");
 			await builder.UseWolverineWithRabbitMqAsync(builder.Configuration, opts =>
-			{
-				opts.PublishAllMessages().ToRabbitExchange("questions");
+			{				
 				opts.ApplicationAssembly = typeof(Program).Assembly;
 			});
 

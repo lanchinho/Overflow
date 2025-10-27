@@ -34,8 +34,7 @@ public class QuestionsController(QuestionDbContext db,
 			Title = dto.Title,
 			Content = sanitizer.Sanitize(dto.Content),
 			TagSlugs = dto.Tags,
-			AskerId = userId,
-			AskerDisplayName = name
+			AskerId = userId			
 		};
 
 		if (!await tagService.AreTagsValidAsync(question.TagSlugs))
@@ -146,8 +145,7 @@ public class QuestionsController(QuestionDbContext db,
 		var answer = new Answer
 		{
 			Content = sanitizer.Sanitize(dto.Content),
-			UserId = userId,
-			UserDisplayName = name,
+			UserId = userId,			
 			QuestionId = questionId
 		};
 

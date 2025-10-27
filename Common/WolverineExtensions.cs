@@ -14,33 +14,37 @@ namespace Common;
 
 public static class WolverineExtensions
 {
-    public static async Task UseWolverineWithRabbitMqAsync(
-        this IHostApplicationBuilder builder,
-        IConfiguration config,
-        Action<WolverineOptions> configureMessaging)
-    {
-        var retryPolicy = Policy
-            .Handle<BrokerUnreachableException>()
-            .Or<SocketException>()
-            .WaitAndRetryAsync(
-                retryCount: 5,
-                retryAttemp => TimeSpan.FromSeconds(Math.Pow(2, retryAttemp)),
-                (exception, timespan, retryCount) =>
-                {
-                    Console.WriteLine($"Retry attempt {retryCount} failed. Retrying in {timespan.Seconds} seconds...");
-                });
+	public static async Task UseWolverineWithRabbitMqAsync(
+		this IHostApplicationBuilder builder,
+		IConfiguration config,
+		Action<WolverineOptions> configureMessaging)
+	{
+		var isEfDesignTime = AppDomain.CurrentDomain.FriendlyName.StartsWith("ef", StringComparison.OrdinalIgnoreCase);
+		if (!isEfDesignTime)
+		{
+			var retryPolicy = Policy
+				  .Handle<BrokerUnreachableException>()
+				  .Or<SocketException>()
+				  .WaitAndRetryAsync(
+				  	retryCount: 5,
+				  	retryAttemp => TimeSpan.FromSeconds(Math.Pow(2, retryAttemp)),
+				  	(exception, timespan, retryCount) =>
+				  	{
+				  		Console.WriteLine($"Retry attempt {retryCount} failed. Retrying in {timespan.Seconds} seconds...");
+				  	});
 
-        await retryPolicy.ExecuteAsync(async () =>
-        {
-            var endpoint = config.GetConnectionString("messaging")
-                ?? throw new InvalidOperationException("messaging connection string no found");
+			await retryPolicy.ExecuteAsync(async () =>
+			{
+				var endpoint = config.GetConnectionString("messaging")
+					?? throw new InvalidOperationException("messaging connection string no found");
 
-            var factory = new ConnectionFactory
-            {
-                Uri = new Uri(endpoint)
-            };
-            await using var connection = await factory.CreateConnectionAsync();
-        });
+				var factory = new ConnectionFactory
+				{
+					Uri = new Uri(endpoint)
+				};
+				await using var connection = await factory.CreateConnectionAsync();
+			});
+		}
 
 		builder.Services.AddOpenTelemetry().WithTracing(traveProviderBuilder =>
 		{
@@ -53,9 +57,9 @@ public static class WolverineExtensions
 		{
 			opts.UseRabbitMqUsingNamedConnection("messaging")
 				.AutoProvision()
-                .DeclareExchange("questions");
+				.UseConventionalRouting();
 
-            configureMessaging(opts);
+			configureMessaging(opts);
 		});
 	}
 }

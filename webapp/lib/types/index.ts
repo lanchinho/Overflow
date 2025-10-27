@@ -3,7 +3,7 @@ export type Question = {
   title: string
   content: string
   askerId: string
-  askerDisplayName: string
+  author?: Profile
   createdAt: string
   updatedAt?: string
   viewCount: number
@@ -18,7 +18,7 @@ export type Answer = {
   id: string
   content: string
   userId: string
-  userDisplayName: string
+  author?: Profile
   createdAt: string
   updatedAt?: string
   accepted: boolean
@@ -26,8 +26,20 @@ export type Answer = {
 }
 
 export type Tag = {
-  id: string,
-  name: string,
-  slug: string,
+  id: string
+  name: string
+  slug: string
   description: string
+}
+
+export type Profile ={
+  userId: string
+  displayName: string
+  description: string
+  reputation: number
+}
+
+export type FetchResponse<T> = {
+  data: T | null
+  error?: {message: string, status: number}
 }

@@ -2,7 +2,6 @@ using Common;
 using SearchService.Data;
 using SearchService.Endpoints;
 using Typesense;
-using Wolverine.RabbitMQ;
 
 namespace SearchService;
 
@@ -23,10 +22,6 @@ public class Program
 
 		await builder.UseWolverineWithRabbitMqAsync(builder.Configuration, opts =>
 		{
-			opts.ListenToRabbitQueue("questions.search", cfg =>
-			{
-				cfg.BindExchange("questions");
-			});
 			opts.ApplicationAssembly = typeof(Program).Assembly;
 		});
 
