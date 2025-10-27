@@ -19,7 +19,9 @@ public static class WolverineExtensions
 		IConfiguration config,
 		Action<WolverineOptions> configureMessaging)
 	{
-		var isEfDesignTime = AppDomain.CurrentDomain.FriendlyName.StartsWith("ef", StringComparison.OrdinalIgnoreCase);
+		var isEfDesignTime = AppDomain.CurrentDomain.FriendlyName.StartsWith("ef", StringComparison.OrdinalIgnoreCase) 
+			|| AppDomain.CurrentDomain.FriendlyName.Equals("StatsService", StringComparison.OrdinalIgnoreCase);
+
 		if (!isEfDesignTime)
 		{
 			var retryPolicy = Policy

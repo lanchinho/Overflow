@@ -41,6 +41,7 @@ var rabbitmq = builder.AddRabbitMQ("messaging")
 
 var questionDb = postgres.AddDatabase("questionDb");
 var profileDb = postgres.AddDatabase("profileDb");
+var statsDb = postgres.AddDatabase("statsDb");
 
 var questionService = builder.AddProject<Projects.QuestionService>("question-svc")
 	.WithReference(keycloak)
@@ -65,6 +66,12 @@ var profileService = builder.AddProject<Projects.ProfileService>("profile-svc")
 	.WaitFor(profileDb)
 	.WaitFor(rabbitmq);
 
+var statsService = builder.AddProject<Projects.StatsService>("stats-svc")	
+	.WithReference(statsDb)
+	.WithReference(rabbitmq)	
+	.WaitFor(statsDb)
+	.WaitFor(rabbitmq);
+
 var yarp = builder.AddYarp("gateway")
 	.WithConfiguration(yarpBuilder =>
 	{
@@ -73,6 +80,7 @@ var yarp = builder.AddYarp("gateway")
 		yarpBuilder.AddRoute("/tags/{**catch-all}", questionService);
 		yarpBuilder.AddRoute("/search/{**catch-all}", searchService);
 		yarpBuilder.AddRoute("/profiles/{**catch-all}", profileService);
+		yarpBuilder.AddRoute("/stats/{**catch-all}", statsService);
 	})
 	.WithEnvironment("ASPNETCORE_URLS", "http://*:8001")
 	.WithEndpoint(port:8001, targetPort:8001, scheme: "http", name:"gateway", isExternal: true)
