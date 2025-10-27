@@ -3,6 +3,9 @@
 import { fetchClient } from "../fetchClient";
 import { Tag } from "../types";
 
-export async function getTags(){
-  return fetchClient<Tag[]>("/tags", "GET", {cache: "force-cache"});
+export async function getTags(sort?: string){
+  let url = "/tags";
+  if(sort) url += "?sort=" + sort;
+  
+  return fetchClient<Tag[]>(url, "GET", {cache: "force-cache"});
 }

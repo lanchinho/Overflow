@@ -11,14 +11,15 @@ namespace QuestionService.Controllers
 	public class TagsController(QuestionDbContext db) : ControllerBase
 	{
 		[HttpGet]
-		public async Task<IActionResult> GetTagsAsync()
+		public async Task<IActionResult> GetTagsAsync(string? sort)
 		{
-			IReadOnlyList<Tag> tags = await db.Tags
-				.AsNoTracking()
-				.OrderBy(x => x.Name)
-				.ToListAsync();
+			var query = db.Tags.AsNoTracking().AsQueryable();
 
-			return Ok(tags);
+			query = sort == "popular"
+				? query.OrderByDescending(x => x.UsageCount).ThenBy(x => x.Name)
+				: query.OrderBy(x => x.Name);
+
+			return Ok(await query.ToListAsync());
 		}
 	}
 }

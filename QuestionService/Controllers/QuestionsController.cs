@@ -43,6 +43,15 @@ public class QuestionsController(QuestionDbContext db,
 		db.Questions.Add(question);
 		await db.SaveChangesAsync();
 
+		var slugs = question.TagSlugs.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+		if(slugs.Length > 0)
+		{
+			await db.Tags
+				.Where(t => slugs.Contains(t.Slug))
+				.ExecuteUpdateAsync(x => x.SetProperty(t => t.UsageCount,
+					t => t.UsageCount + 1));			
+		}
+
 		await bus.PublishAsync(new QuestionCreated(
 			question.Id,
 			question.Title,
@@ -98,12 +107,32 @@ public class QuestionsController(QuestionDbContext db,
 		if (!await tagService.AreTagsValidAsync(request.Tags))
 			return BadRequest("Invalid tags!");
 
+		var original = questionInDb.TagSlugs.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+		var incoming = request.Tags.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
+		var removed = original.Except(incoming).ToArray();
+		var added = incoming.Except(original).ToArray();
+
 		var sanitizer = new HtmlSanitizer();
 		questionInDb.Title = request.Title;
 		questionInDb.Content = sanitizer.Sanitize(request.Content);
 		questionInDb.TagSlugs = request.Tags;
 		questionInDb.UpdatedAt = DateTime.UtcNow;
 		await db.SaveChangesAsync();
+
+		if(removed.Length > 0)
+		{
+			await db.Tags
+				.Where(t => removed.Contains(t.Slug) && t.UsageCount > 0)
+				.ExecuteUpdateAsync(x => x.SetProperty(t => t.UsageCount, t => t.UsageCount - 1));
+		}
+
+		if (added.Length > 0)
+		{
+			await db.Tags
+				.Where(t => added.Contains(t.Slug))
+				.ExecuteUpdateAsync(x => x.SetProperty(t => t.UsageCount, t => t.UsageCount + 1));
+		}
 
 		await bus.PublishAsync(new QuestionUpdated(questionInDb.Id, questionInDb.Title, questionInDb.Content, [.. questionInDb.TagSlugs]));
 		return NoContent();

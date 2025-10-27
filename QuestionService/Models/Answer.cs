@@ -20,6 +20,8 @@ public class Answer
 
 	public bool Accepted { get; set; } = false;
 
+	public int Votes { get; set; }
+
 	[MaxLength(36)]
 	public required string QuestionId { get; set; }
 
