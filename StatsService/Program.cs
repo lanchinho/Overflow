@@ -1,6 +1,11 @@
-
 using Common;
 using Marten;
+using JasperFx.Events;
+using Contracts;
+using StatsService.Models;
+using StatsService.Projections;
+using JasperFx.Events.Projections;
+using StatsService.Endpoints;
 
 namespace StatsService;
 
@@ -22,13 +27,32 @@ public class Program
 		});
 
 		//usado para event sourcing
-		//"transforma o Postgres em um BD de documento
+		//"transforma o Postgres em um event store
 		builder.Services.AddMarten(opts =>
 		{
 			opts.Connection(builder.Configuration.GetConnectionString("statsDb")!);
+
+			opts.Events.StreamIdentity = StreamIdentity.AsString;
+			opts.Events.AddEventType<QuestionCreated>();
+			opts.Events.AddEventType<UserReputationChanged>();
+
+			opts.Schema.For<TagDailyUsage>()
+				.Index(x => x.Tag)
+				.Index(x => x.Date);
+			
+			opts.Schema.For<UserReputationChanged>()
+				.Index(x => x.UserId)
+				.Index(x => x.Occurred);
+
+
+			opts.Projections.Add(new TrendingTagsProjection(), ProjectionLifecycle.Inline);
+			opts.Projections.Add(new TopUsersProjection(), ProjectionLifecycle.Inline);
+
 		}).UseLightweightSessions();
 
 		var app = builder.Build();
+
+		app.MapStatsEndpoints();
 
 		// Configure the HTTP request pipeline.
 		if (app.Environment.IsDevelopment())

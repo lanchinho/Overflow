@@ -7,6 +7,7 @@ using QuestionService.Data;
 using QuestionService.DTOs;
 using QuestionService.Models;
 using QuestionService.Services;
+using Reputation;
 using System.Security.Claims;
 using Wolverine;
 
@@ -243,6 +244,8 @@ public class QuestionsController(QuestionDbContext db,
 		await db.SaveChangesAsync();
 
 		await bus.PublishAsync(new AnswerAccepted(questionId));
+		await bus.PublishAsync(ReputationHelper.MakeEvent(answer.UserId,
+			ReputationReason.AnswerAccepted, question.AskerId));
 
 		return NoContent();
 	}

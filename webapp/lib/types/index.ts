@@ -23,6 +23,7 @@ export type Answer = {
   updatedAt?: string
   accepted: boolean
   questionId: string
+  votes: number
 }
 
 export type Tag = {
@@ -43,4 +44,9 @@ export type Profile ={
 export type FetchResponse<T> = {
   data: T | null
   error?: {message: string, status: number}
+}
+
+export type TrendingTag ={
+  tag: string
+  count: number
 }
