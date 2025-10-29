@@ -1,11 +1,20 @@
 import { Button } from "@heroui/button";
-import { ArrowDownCircleIcon, ArrowUpCircleIcon, CheckIcon } from "@heroicons/react/24/solid";
+import { ArrowDownCircleIcon, ArrowUpCircleIcon, CheckCircleIcon as CheckSolid } from "@heroicons/react/24/solid";
+import { CheckCircleIcon as CheckOutLined} from "@heroicons/react/24/outline";
+import { Answer, Question } from "@/lib/types";
 
 type Props ={
-  accepted?: boolean
+  target: Question | Answer
+  currentUserId?: string;
 }
 
-export default function VotingButtons({accepted}: Props) {
+const isTargetAnswwer = (target: Question | Answer): target is Answer =>{
+  return "questionId" in target;
+};
+
+export default function VotingButtons({target, currentUserId}: Props) {
+  const isAnswer = isTargetAnswwer(target);
+
   return (
     <div className="flex-shrink-0 flex flex-col gap-3 items-center justify-start mt-4">
       <Button
@@ -22,14 +31,20 @@ export default function VotingButtons({accepted}: Props) {
         variant='light'
       >
         <ArrowDownCircleIcon className="w-12"/>        
-      </Button>
-      
-      {accepted && (
+      </Button>      
+      {isAnswer && (
         <Button
           isIconOnly
-          variant='light'          
+          variant='light'
+          className="disabled:opacity-100"
+          isDisabled={target.accepted}          
         >
-          <CheckIcon className="size-12 text-success" strokeWidth={4}/>          
+          {target.accepted ? (
+            <CheckSolid className="text-success"/>
+          ) : (
+            <CheckOutLined className="size-12 text-default-500"/>          
+          )}
+          
         </Button>
       )}
     </div>
