@@ -23,7 +23,10 @@ export default async function QuestionDetailedPage({params}: {params: Params}) {
         <AnswersHeader answerCount={question.answers.length}/>
       )}
       {question.answers.map(answer=>(
-        <AnswerContent answer={answer} key={answer.id}/>
+        <AnswerContent
+          answer={answer}
+          askerId={question.askerId}
+          key={answer.id}/>
       ))}
       <AnswerForm  questionId={question.id}/>
     </div>
