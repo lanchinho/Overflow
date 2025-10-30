@@ -4,15 +4,23 @@ import { revalidatePath } from "next/cache";
 import { fetchClient } from "../fetchClient";
 import { AnswerSchema } from "../schemas/answerSchema";
 import { QuestionSchema } from "../schemas/questionSchema";
-import { Answer, FetchResponse, Profile, Question, Vote, VoteRecord } from "../types";
+import { Answer, FetchResponse, PaginatedResult, Profile, Question, QuestionParams, Vote, VoteRecord } from "../types";
 import { auth } from "@/auth";
 
-export async function getQuestions(tag?: string): Promise<FetchResponse<Question[]>>{
-  let questionUrl = "/questions";    
-  if (tag) questionUrl += "?tag=" + tag;  
+export async function getQuestions(qParams?: QuestionParams): Promise<FetchResponse<PaginatedResult<Question>>>{
+  const params = new URLSearchParams();
+
+  if (qParams?.tag) params.set("tag", qParams.tag);
+  if (qParams?.page) params.set("page", qParams.page.toString());
+  if (qParams?.pageSize) params.set("pageSize", qParams.pageSize.toString());
+  if (qParams?.sort) params.set("sort", qParams.sort); 
+  
+  const questionUrl = `/questions${params ? `?${params}` : ""}`;    
+
+  console.log(questionUrl);
 
   const {data: questions, error: questionError} = 
-      await fetchClient<Question[]>(questionUrl, "GET");
+      await fetchClient<PaginatedResult<Question>>(questionUrl, "GET");
 
   if(!questions || questionError){
     return{
@@ -21,8 +29,8 @@ export async function getQuestions(tag?: string): Promise<FetchResponse<Question
     };
   }
 
-  const userIds = Array.from(new Set(questions.map(x=> x.askerId)));
-  if(userIds.length === 0) return {data: []};
+  const userIds = Array.from(new Set(questions.items.map(x=> x.askerId)));
+  if(userIds.length === 0) return {data: {items: [], page: 0, pageSize: 0, totalCount: 0}};
 
   const ids = Array.from(userIds).sort();
   const profilesUrl = "/profiles/batch?" + new URLSearchParams({ids: ids.join(",")});
@@ -32,12 +40,17 @@ export async function getQuestions(tag?: string): Promise<FetchResponse<Question
   if(profilesError) return {data: null, error: {message: "Problem getting profiles", status: 500}};
 
   const profileMap = new Map(profiles?.map(p => [p.userId, p])); //tipo mapear pra um dicionário onde a chave é o id do usuário e o valor é o obj "Profile"...
-  const enriched = questions.map(q=>({
+  const enriched = questions.items.map(q=>({
     ...q,
     author: profileMap.get(q.askerId)
   }));
 
-  return  {data:enriched};
+  return  {data:{
+    items: enriched,
+    page: questions.page,
+    pageSize: questions.pageSize,
+    totalCount: questions.totalCount
+  }};
 }
 
 export async function getQuestionById(id: string): Promise<FetchResponse<Question>> {  

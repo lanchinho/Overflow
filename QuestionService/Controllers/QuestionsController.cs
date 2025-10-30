@@ -1,4 +1,5 @@
-﻿using Contracts;
+﻿using Common;
+using Contracts;
 using Ganss.Xss;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using QuestionService.Data;
 using QuestionService.DTOs;
 using QuestionService.Models;
+using QuestionService.RequestHelpers;
 using QuestionService.Services;
 using Reputation;
 using System.Security.Claims;
@@ -35,7 +37,7 @@ public class QuestionsController(QuestionDbContext db,
 			Title = dto.Title,
 			Content = sanitizer.Sanitize(dto.Content),
 			TagSlugs = dto.Tags,
-			AskerId = userId			
+			AskerId = userId
 		};
 
 		if (!await tagService.AreTagsValidAsync(question.TagSlugs))
@@ -45,12 +47,12 @@ public class QuestionsController(QuestionDbContext db,
 		await db.SaveChangesAsync();
 
 		var slugs = question.TagSlugs.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-		if(slugs.Length > 0)
+		if (slugs.Length > 0)
 		{
 			await db.Tags
 				.Where(t => slugs.Contains(t.Slug))
 				.ExecuteUpdateAsync(x => x.SetProperty(t => t.UsageCount,
-					t => t.UsageCount + 1));			
+					t => t.UsageCount + 1));
 		}
 
 		await bus.PublishAsync(new QuestionCreated(
@@ -67,8 +69,8 @@ public class QuestionsController(QuestionDbContext db,
 	public async Task<IActionResult> GetQuestionAsync(string id)
 	{
 		var question = await db.Questions.AsNoTracking()
-			.Include(x=> x.Answers)
-			.FirstOrDefaultAsync(x=> x.Id == id);
+			.Include(x => x.Answers)
+			.FirstOrDefaultAsync(x => x.Id == id);
 
 		if (question is null)
 			return NotFound("Question was not found !");
@@ -81,16 +83,32 @@ public class QuestionsController(QuestionDbContext db,
 	}
 
 	[HttpGet]
-	public async Task<IActionResult> GetQuestionsAsync(string? tag)
+	public async Task<IActionResult> GetQuestionsAsync([FromQuery] QuestionsQuery q)
 	{
 		var query = db.Questions
 			.AsNoTracking()
 			.AsQueryable();
 
-		if (!string.IsNullOrWhiteSpace(tag))
-			query = query.Where(x => x.TagSlugs.Contains(tag));
+		if (!string.IsNullOrWhiteSpace(q.Tag))
+			query = query.Where(x => x.TagSlugs.Contains(q.Tag));
 
-		return Ok(await query.OrderByDescending(x => x.CreatedAt).ToListAsync());
+		query = q.Sort switch
+		{
+			"newest" => query.OrderByDescending(x => x.CreatedAt),
+			"active" => query.OrderByDescending(x => new[]
+			{
+				x.CreatedAt,
+				x.UpdatedAt ?? DateTime.MinValue,
+				x.Answers.Max(a => (DateTime?)a.CreatedAt) ?? DateTime.MinValue,
+				x.Answers.Max(a => a.UpdatedAt) ?? DateTime.MinValue
+			}.Max()),
+			"unanswered" => query.Where(x => x.AnswerCount == 0)
+				.OrderByDescending(x => x.CreatedAt),
+			_ => query.OrderByDescending(x => x.CreatedAt)
+		};
+
+		var result = await query.ToPaginatedListAsync(q);
+		return Ok(result);
 	}
 
 	[Authorize]
@@ -121,7 +139,7 @@ public class QuestionsController(QuestionDbContext db,
 		questionInDb.UpdatedAt = DateTime.UtcNow;
 		await db.SaveChangesAsync();
 
-		if(removed.Length > 0)
+		if (removed.Length > 0)
 		{
 			await db.Tags
 				.Where(t => removed.Contains(t.Slug) && t.UsageCount > 0)
@@ -175,7 +193,7 @@ public class QuestionsController(QuestionDbContext db,
 		var answer = new Answer
 		{
 			Content = sanitizer.Sanitize(dto.Content),
-			UserId = userId,			
+			UserId = userId,
 			QuestionId = questionId
 		};
 
@@ -239,7 +257,7 @@ public class QuestionsController(QuestionDbContext db,
 
 		if (question.HasAcceptedAnswer || answer.QuestionId != questionId)
 			return BadRequest("Cannot accept answer");
-		
+
 		question.HasAcceptedAnswer = answer.Accepted = true;
 		await db.SaveChangesAsync();
 
