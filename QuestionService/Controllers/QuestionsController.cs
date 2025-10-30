@@ -43,8 +43,23 @@ public class QuestionsController(QuestionDbContext db,
 		if (!await tagService.AreTagsValidAsync(question.TagSlugs))
 			return BadRequest("Invalid tags!");
 
-		db.Questions.Add(question);
-		await db.SaveChangesAsync();
+		await using var tx = await db.Database.BeginTransactionAsync();
+		try
+		{
+			db.Questions.Add(question);
+			await db.SaveChangesAsync();
+
+			await bus.PublishAsync(new QuestionCreated(question.Id, question.Title, question.Content,
+				question.CreatedAt, question.TagSlugs));
+
+			await tx.CommitAsync();
+		}
+		catch (Exception e)
+		{
+			await tx.RollbackAsync();
+			Console.WriteLine(e);
+			throw;
+		}
 
 		var slugs = question.TagSlugs.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 		if (slugs.Length > 0)
@@ -54,13 +69,6 @@ public class QuestionsController(QuestionDbContext db,
 				.ExecuteUpdateAsync(x => x.SetProperty(t => t.UsageCount,
 					t => t.UsageCount + 1));
 		}
-
-		await bus.PublishAsync(new QuestionCreated(
-			question.Id,
-			question.Title,
-			question.Content,
-			question.CreatedAt,
-			question.TagSlugs));
 
 		return Created($"/questions/{question.Id}", question);
 	}

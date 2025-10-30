@@ -1,6 +1,11 @@
 using Common;
+using Contracts;
+using Microsoft.EntityFrameworkCore;
 using QuestionService.Data;
 using QuestionService.Services;
+using Wolverine.EntityFrameworkCore;
+using Wolverine.Postgresql;
+using Wolverine.RabbitMQ;
 
 namespace QuestionService
 {
@@ -19,10 +24,24 @@ namespace QuestionService
 			builder.Services.AddScoped<TagService>();
 			builder.Services.AddKeyCloakAuthentication();
 
-			builder.AddNpgsqlDbContext<QuestionDbContext>("questionDb");
+			//RIP aspire way to get cs lol...
+			//but it was needed for message durability feature in wolverine
+			//builder.AddNpgsqlDbContext<QuestionDbContext>("questionDb");
+
+			var connectionString = builder.Configuration.GetConnectionString("questionDb")!;
+			builder.Services.AddDbContext<QuestionDbContext>(options =>
+			{
+				options.UseNpgsql(connectionString);
+			}, optionsLifetime: ServiceLifetime.Singleton);
+
 			await builder.UseWolverineWithRabbitMqAsync(builder.Configuration, opts =>
 			{				
 				opts.ApplicationAssembly = typeof(Program).Assembly;
+				opts.PersistMessagesWithPostgresql(connectionString);
+				opts.UseEntityFrameworkCoreTransactions();
+				opts.PublishMessage<QuestionCreated>().ToRabbitExchange("Contracts.QuestionCreated").UseDurableOutbox();
+				opts.PublishMessage<QuestionUpdated>().ToRabbitExchange("Contracts.QuestionUpdated").UseDurableOutbox();
+				opts.PublishMessage<QuestionDeleted>().ToRabbitExchange("Contracts.QuestionDeleted").UseDurableOutbox();
 			});
 
 			var app = builder.Build();

@@ -17,7 +17,9 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.10">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>    
+    </PackageReference>
+    <PackageReference Include="WolverineFx.EntityFrameworkCore" Version="5.0.0" />
+    <PackageReference Include="WolverineFx.Postgresql" Version="5.0.0" />    
   </ItemGroup>
 
   <ItemGroup>
