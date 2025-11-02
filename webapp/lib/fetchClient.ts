@@ -35,10 +35,10 @@ export async function fetchClient<T>(
 
   if(!response.ok){
     if(response.status === 404) return notFound();
-    if(response.status === 500) throw new Error("Server error. Please try again later");
+    //if(response.status === 500) throw new Error("Server error. Please try again later");
 
     let message = "";
-
+    
     if(response.status === 401){
       const authHeader = response.headers.get("WWW-Authenticate");
       if(authHeader?.includes("error_description")){

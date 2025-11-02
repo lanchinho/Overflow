@@ -26,12 +26,13 @@ export async function getTopUsers(): Promise<FetchResponse<TopUserWithProfile[]>
     cache: "force-cache",
     next: {revalidate: 3600}
   });
+  
   if (error) return {data: null, error: 
             {message: "Problem getting users", status: 500}};
-    
+
   const ids = [...new Set(users?.map(u => u.userId))];
   const qs = encodeURIComponent(ids.join(","));
-    
+
   const {data: profiles, error: profilesError} = await fetchClient<Profile[]>(
     `/profiles/batch?ids=${qs}`, "GET", {cache: "force-cache", next: {revalidate: 3600}}
   );

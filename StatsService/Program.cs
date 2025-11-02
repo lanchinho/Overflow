@@ -6,6 +6,7 @@ using StatsService.Models;
 using StatsService.Projections;
 using JasperFx.Events.Projections;
 using StatsService.Endpoints;
+using StatsService.Extensions;
 
 namespace StatsService;
 
@@ -27,10 +28,13 @@ public class Program
 		});
 
 		//usado para event sourcing
-		//"transforma o Postgres em um event store
+		//"transforma o Postgres em um event store DB
+		var connString = builder.Configuration.GetConnectionString("statsDb")!;
+		await connString.EnsurePostgresDatabaseExistsAsync();
+
 		builder.Services.AddMarten(opts =>
 		{
-			opts.Connection(builder.Configuration.GetConnectionString("statsDb")!);
+			opts.Connection(connString);
 
 			opts.Events.StreamIdentity = StreamIdentity.AsString;
 			opts.Events.AddEventType<QuestionCreated>();

@@ -36,7 +36,7 @@ public static class ProfileEndpoints
 				.Select(x => new ProfileSummaryDto(x.Id, x.DisplayName, x.Reputation))
 				.ToListAsync();
 
-		return rows.Count > 0 ? TypedResults.Ok(rows) : TypedResults.NotFound();
+		return rows != null && rows.Count > 0 ? TypedResults.Ok(rows) : TypedResults.NotFound();
 	}
 
 	public static async Task<Results<Ok<List<UserProfile>>, NotFound>> GetUserProfileByFilterAsync(string? sortBy, ProfileDbContext db)

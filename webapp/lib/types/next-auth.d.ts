@@ -29,7 +29,9 @@ declare module "next-auth/jwt" {
         user:{
              id: string;
             displayName?: string;
-            reputation: number   
+            reputation: number;
+            email: string;
+            emailVerified: Date;   
         }      
     }
 }
